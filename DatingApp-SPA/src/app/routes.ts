@@ -4,6 +4,7 @@ import { MembersListComponent } from './members/members-list/members-list.compon
 import { MessagesComponent } from './messages/messages.component';
 import { ListsComponent } from './lists/lists.component';
 import { AuthGuard } from './_guards/auth.guard';
+import { MemberDetailComponent } from './members/members-list/member-detail/member-detail.component';
 
 export const appRoutes: Routes = [
   { path: '', component: HomeComponent },
@@ -16,6 +17,7 @@ export const appRoutes: Routes = [
         path: 'members',
         component: MembersListComponent
       },
+      { path: 'members/:id', component: MemberDetailComponent },
       { path: 'messages', component: MessagesComponent },
       { path: 'lists', component: ListsComponent }
     ]
