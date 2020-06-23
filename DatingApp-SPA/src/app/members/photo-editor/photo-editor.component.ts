@@ -1,10 +1,11 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, EventEmitter, Output } from '@angular/core';
 import { FileUploader } from 'ng2-file-upload';
 import { Photo } from 'src/app/_models/photo';
 import { AlertifyjsService } from 'src/app/_services/alertifyjs.service';
 import { AuthService } from 'src/app/_services/auth.service';
 import { UserService } from 'src/app/_services/user.service';
 import { environment } from '../../../environments/environment';
+
 @Component({
   selector: 'app-photo-editor',
   templateUrl: './photo-editor.component.html',
@@ -12,6 +13,7 @@ import { environment } from '../../../environments/environment';
 })
 export class PhotoEditorComponent implements OnInit {
   @Input() photos: Photo[];
+  @Output() getMemberPhotoChange = new EventEmitter<string>();
 
   uploader: FileUploader;
   hasBaseDropZoneOver = false;
@@ -75,6 +77,12 @@ export class PhotoEditorComponent implements OnInit {
           this.currentMain = this.photos.filter((p) => p.isMain === true)[0];
           this.currentMain.isMain = false;
           photo.isMain = true;
+          this.authService.changeMemeberPhoto(photo.url);
+          this.authService.currentUser.photoUrl = photo.url;
+          localStorage.setItem(
+            'user',
+            JSON.stringify(this.authService.currentUser)
+          );
           this.alertify.success('Photo set to main');
         },
         (error) => {
