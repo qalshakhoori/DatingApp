@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -20,7 +21,6 @@ namespace DatingApp.API.Controllers
   [AllowAnonymous]
   public class AuthController : ControllerBase
   {
-    public IAuthRepository _repo { get; }
     private readonly IConfiguration _config;
     private readonly UserManager<User> _userManager;
     private readonly SignInManager<User> _signInManager;
@@ -32,26 +32,22 @@ namespace DatingApp.API.Controllers
       _signInManager = signInManager;
       _userManager = userManager;
       _config = config;
-      _repo = repo;
       _mapper = mapper;
     }
 
     [HttpPost("register")]
     public async Task<IActionResult> Register(UserForRegisterDto userForRegisterDto)
     {
-      // validate request
-      var username = userForRegisterDto.Username.ToLower();
-
-      if (await _repo.UserExists(username))
-        return BadRequest("Username already exists");
-
       var userToCreate = _mapper.Map<User>(userForRegisterDto);
 
-      var createdUser = await _repo.Register(userToCreate, userForRegisterDto.Password);
+      var result = await _userManager.CreateAsync(userToCreate, userForRegisterDto.Password);
 
-      var userToReturn = _mapper.Map<UserForDetailedDto>(createdUser);
+      if (!result.Succeeded)
+        return BadRequest();
 
-      return CreatedAtRoute("GetUser", new { controller = "Users", id = createdUser.Id }, userToReturn);
+      var userToReturn = _mapper.Map<UserForDetailedDto>(userToCreate);
+
+      return CreatedAtRoute("GetUser", new { controller = "Users", id = userToCreate.Id }, userToReturn);
     }
 
     [HttpPost("login")]
@@ -67,7 +63,7 @@ namespace DatingApp.API.Controllers
 
         return Ok(new
         {
-          token = GenerateJwtToken(user),
+          token = GenerateJwtTokenAsync(user),
           user = appUser
         });
       }
@@ -75,12 +71,19 @@ namespace DatingApp.API.Controllers
       return Unauthorized();
     }
 
-    private string GenerateJwtToken(User user)
+    private async Task<string> GenerateJwtTokenAsync(User user)
     {
-      var claims = new[] {
+      var claims = new List<Claim> {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.UserName)
             };
+
+      var roles = await _userManager.GetRolesAsync(user);
+
+      foreach (var role in roles)
+      {
+        claims.Add(new Claim(ClaimTypes.Role, role));
+      }
 
       var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config.GetSection("AppSettings:Token").Value));
 
